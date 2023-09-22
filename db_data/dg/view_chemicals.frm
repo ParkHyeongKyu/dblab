@@ -1,0 +1,15 @@
+TYPE=VIEW
+query=select `chem`.`c_code` AS `c_code`,`chem`.`mi_code` AS `mi_code`,`chem`.`mi_name` AS `name` from `dg`.`app_material_info` `chem`
+md5=d63bf694fe620bceb866f11f0b42517f
+updatable=1
+algorithm=0
+definer_user=dg
+definer_host=%
+suid=2
+with_check_option=0
+timestamp=2023-09-22 04:18:06
+create-version=1
+source=select c_code, mi_code, mi_name as name\nfrom app_material_info as chem
+client_cs_name=utf8mb4
+connection_cl_name=utf8mb4_general_ci
+view_body_utf8=select `chem`.`c_code` AS `c_code`,`chem`.`mi_code` AS `mi_code`,`chem`.`mi_name` AS `name` from `dg`.`app_material_info` `chem`
