@@ -1,10 +1,14 @@
 import mysql.connector
 import numpy as np
 import json
+import argparse
+import importlib
 
 from adbench.run import RunPipeline
 from adbench.myutils import Utils
 from adbench.baseline.Customized.run import Customized
+from model_import_path import model_import_paths
+from sklearn.model_selection import train_test_split
 
 # 아래 download_datasets를 comment in 해서 최초 1번 실행시켜주어야 함
 # adbench library에 github에서 제공하는 default dataset을 Inject해야 RunPipeline이 실행 됨.
@@ -17,6 +21,19 @@ config = {
     'host': 'localhost',
     'database': 'dg'
 }
+
+parser = argparse.ArgumentParser(description='Run the model with the specified algorithm.')
+parser.add_argument('--model', type=str, required=True, help='The name of the model to run.')
+args = parser.parse_args()
+model_name = args.model
+
+import_path = model_import_paths.get(model_name)
+
+if import_path:
+    module = importlib.import_module(import_path)
+    model_class = getattr(module, model_name)
+else:
+    raise ValueError(f'Invalid model name: {model_name}')
 
 try:
     with open('user_customized.sql', 'r') as file:
@@ -40,7 +57,6 @@ try:
 
     data = np.load('query_results.npz')
 
-    # JSON 파일에서 X, y 축 column 정보를 불러오기
     with open('columns_info.json', 'r') as file:
         columns_info = json.load(file)
 
@@ -52,9 +68,13 @@ try:
 
     dataset = {'X': np.column_stack([data[name] for name in X_columns]), 'y': np.column_stack([data[name] for name in y_columns])}
 
-    pipeline = RunPipeline(suffix='test', parallel='supervise', realistic_synthetic_mode=None, noise_type=None)
-    results = pipeline.run(dataset=dataset, clf=Customized)
-    # 위 부분은 모델을 어떻게 학습시킬지, 라벨링 할지에 따라 달라질 것임.
+    X = dataset['X']
+    y = dataset['y']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+
+    model = model_class(seed=42)
+    model.fit(X_train, y_train)
+    score = model.predict_score(X_test)
 
 except FileNotFoundError as err:
     print(f"Error: {err}")
