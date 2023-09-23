@@ -123,10 +123,10 @@ try:
         X_train_encoded, X_test_encoded = X_train, X_test
 
     # data rebalancing
-    if rebalancing_method == 'oversample':
+    if rebalancing_method == 'over':
         sampler = RandomOverSampler(random_state=42)
         X_resampled, y_resampled = sampler.fit_resample(X_train_encoded, y_train)
-    elif rebalancing_method == 'undersample':
+    elif rebalancing_method == 'under':
         sampler = RandomUnderSampler(random_state=42)
         X_resampled, y_resampled = sampler.fit_resample(X_train_encoded, y_train)
     elif rebalancing_method == 'no':
