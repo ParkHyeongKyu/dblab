@@ -4,10 +4,8 @@ import json
 import argparse
 import importlib
 import time
-
-from adbench.run import RunPipeline
+import pandas as pd
 from adbench.myutils import Utils
-from adbench.baseline.Customized.run import Customized
 from model_import_path import model_import_paths
 from sklearn.model_selection import train_test_split
 
@@ -25,15 +23,25 @@ config = {
 
 parser = argparse.ArgumentParser(description='Run the model with the specified algorithm.')
 parser.add_argument('--model', type=str, required=True, help='The name of the model to run.')
+parser.add_argument('--impute', type=str, default='mean', choices=['mean', 'zero', 'most_frequent'], help='The method of imputation to be used.')
 args = parser.parse_args()
 model_name = args.model
+imputation_method = args.impute
 
 import_path = model_import_paths.get(model_name)
 
+if import_path == 'adbench.baseline.PyOD':
+    class_name = 'PYOD'
+else:
+    class_name = model_name
+
 if import_path:
     module = importlib.import_module(import_path)
-    model_class = getattr(module, model_name)
-    model = model_class(seed=42)
+    model_class = getattr(module, class_name)
+    if class_name == 'PYOD':
+        model = model_class(seed=42, model_name=model_name)
+    else:
+        model = model_class(seed=42)
 else:
     raise ValueError(f'Invalid model name: {model_name}')
 
@@ -59,6 +67,26 @@ try:
 
     data = np.load('query_results.npz')
 
+    df = pd.DataFrame({name: data[name] for name in data.files})
+
+    def impute_mean(df, column):
+        df[column].fillna(df[column].mean(), inplace=True)
+
+    def impute_zero(df, column):
+        df[column].fillna(0, inplace=True)
+
+    def impute_most_frequent(df, column):
+        most_frequent = df[column].mode()[0]
+        df[column].fillna(most_frequent, inplace=True)
+
+    for column in df.columns:
+        if imputation_method == "mean":
+            impute_mean(df, column)
+        elif imputation_method == "zero":
+            impute_zero(df, column)
+        elif imputation_method == "most_frequent":
+            impute_most_frequent(df, column)
+
     with open('columns_info.json', 'r') as file:
         columns_info = json.load(file)
 
@@ -68,10 +96,8 @@ try:
     if not X_columns or not y_columns:
         raise ValueError("Invalid columns_info.json format. It should contain non-empty 'X' and 'y'.")
 
-    dataset = {'X': np.column_stack([data[name] for name in X_columns]), 'y': np.column_stack([data[name] for name in y_columns])}
-
-    X = dataset['X']
-    y = dataset['y']
+    X = df.loc[:, X_columns].to_numpy()
+    y = df.loc[:, y_columns].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # fitting
