@@ -117,11 +117,10 @@ try:
     if one_hot_encoding == 'yes':
         X_train_encoded = pd.get_dummies(X_train, columns=X_columns)
         X_test_encoded = pd.get_dummies(X_test, columns=X_columns)
+        # Ensure the columns are the same in both dataframes
+        X_train_encoded, X_test_encoded = X_train_encoded.align(X_test_encoded, join='left', axis=1, fill_value=0)
     else:
         X_train_encoded, X_test_encoded = X_train, X_test
-
-    # Ensure the columns are the same in both dataframes
-    X_train_encoded, X_test_encoded = X_train_encoded.align(X_test_encoded, join='left', axis=1, fill_value=0)
 
     # data rebalancing
     if rebalancing_method == 'oversample':
