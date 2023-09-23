@@ -8,6 +8,8 @@ import pandas as pd
 from adbench.myutils import Utils
 from model_import_path import model_import_paths
 from sklearn.model_selection import train_test_split
+from imblearn.over_sampling import RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
 
 # 아래 download_datasets를 comment in 해서 최초 1번 실행시켜주어야 함
 # adbench library에 github에서 제공하는 default dataset을 Inject해야 RunPipeline이 실행 됨.
@@ -24,9 +26,11 @@ config = {
 parser = argparse.ArgumentParser(description='Run the model with the specified algorithm.')
 parser.add_argument('--model', type=str, required=True, help='The name of the model to run.')
 parser.add_argument('--impute', type=str, default='mean', choices=['mean', 'zero', 'most_frequent'], help='The method of imputation to be used.')
+parser.add_argument('--rebalance', type=str, default='no', choices=['no', 'over', 'under'], help='The method of rebalancing data')
 args = parser.parse_args()
 model_name = args.model
 imputation_method = args.impute
+rebalancing_method = args.rebalance
 
 import_path = model_import_paths.get(model_name)
 
@@ -100,9 +104,20 @@ try:
     y = df.loc[:, y_columns].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+    if rebalancing_method == 'oversample':
+        sampler = RandomOverSampler(random_state=42)
+        X_resampled, y_resampled = sampler.fit_resample(X_train, y_train)
+    elif rebalancing_method == 'undersample':
+        sampler = RandomUnderSampler(random_state=42)
+        X_resampled, y_resampled = sampler.fit_resample(X_train, y_train)
+    elif rebalancing_method == 'no':
+        X_resampled, y_resampled = X_train, y_train
+    else:
+        raise ValueError("Invalid rebalancing_method")
+
     # fitting
     start_time = time.time()
-    model.fit(X_train=data['X_train'], y_train=data['y_train'])
+    model.fit(X_train=data['X_resampled'], y_train=data['y_resampled'])
     end_time = time.time();
     time_fit = end_time - start_time
     print('Fit time: ' + str(time_fit))
