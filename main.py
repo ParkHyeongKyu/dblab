@@ -28,10 +28,12 @@ parser = argparse.ArgumentParser(description='Run the model with the specified a
 parser.add_argument('--model', type=str, required=True, help='The name of the model to run.')
 parser.add_argument('--impute', type=str, default='mean', choices=['mean', 'zero', 'most_frequent'], help='The method of imputation to be used.')
 parser.add_argument('--rebalance', type=str, default='no', choices=['no', 'over', 'under'], help='The method of rebalancing data')
+parser.add_argument('--onehotencoding', type=str, default='yes', choices=['yes', 'no'], help='Will you apply one hot encoding on Dataset?')
 args = parser.parse_args()
 model_name = args.model
 imputation_method = args.impute
 rebalancing_method = args.rebalance
+one_hot_encoding = args.onehotencoding
 
 # import for adbench models
 import_path = model_import_paths.get(model_name)
@@ -112,8 +114,11 @@ try:
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # One-hot Encoding
-    X_train_encoded = pd.get_dummies(X_train, columns=X_columns)
-    X_test_encoded = pd.get_dummies(X_test, columns=X_columns)
+    if one_hot_encoding == 'yes':
+        X_train_encoded = pd.get_dummies(X_train, columns=X_columns)
+        X_test_encoded = pd.get_dummies(X_test, columns=X_columns)
+    else:
+        X_train_encoded, X_test_encoded = X_train, X_test
 
     # Ensure the columns are the same in both dataframes
     X_train_encoded, X_test_encoded = X_train_encoded.align(X_test_encoded, join='left', axis=1, fill_value=0)
@@ -133,7 +138,7 @@ try:
     # fitting
     start_time = time.time()
     model.fit(X_train=X_resampled, y_train=y_resampled)
-    end_time = time.time();
+    end_time = time.time()
     time_fit = end_time - start_time
     print('Fit time: ' + str(time_fit))
 
