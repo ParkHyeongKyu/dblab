@@ -111,30 +111,37 @@ try:
     y = df.loc[:, y_columns].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+    # One-hot Encoding
+    X_train_encoded = pd.get_dummies(X_train, columns=X_columns)
+    X_test_encoded = pd.get_dummies(X_test, columns=X_columns)
+
+    # Ensure the columns are the same in both dataframes
+    X_train_encoded, X_test_encoded = X_train_encoded.align(X_test_encoded, join='left', axis=1, fill_value=0)
+
     # data rebalancing
     if rebalancing_method == 'oversample':
         sampler = RandomOverSampler(random_state=42)
-        X_resampled, y_resampled = sampler.fit_resample(X_train, y_train)
+        X_resampled, y_resampled = sampler.fit_resample(X_train_encoded, y_train)
     elif rebalancing_method == 'undersample':
         sampler = RandomUnderSampler(random_state=42)
-        X_resampled, y_resampled = sampler.fit_resample(X_train, y_train)
+        X_resampled, y_resampled = sampler.fit_resample(X_train_encoded, y_train)
     elif rebalancing_method == 'no':
-        X_resampled, y_resampled = X_train, y_train
+        X_resampled, y_resampled = X_train_encoded, y_train
     else:
         raise ValueError("Invalid rebalancing_method")
 
     # fitting
     start_time = time.time()
-    model.fit(X_train=data['X_resampled'], y_train=data['y_resampled'])
+    model.fit(X_train=X_resampled, y_train=y_resampled)
     end_time = time.time();
     time_fit = end_time - start_time
     print('Fit time: ' + str(time_fit))
 
     # prediction
-    score = model.predict_score(data['X_test'])
+    score = model.predict_score(X_test_encoded)
 
     # evaluation
-    result = utils.metric(y_true=data['y_test'], y_score=score, pos_label=1)
+    result = utils.metric(y_true=y_test, y_score=score, pos_label=1)
 
     print(f"AUC-ROC: {result['aucroc']}, AUC-PR: {result['aucpr']}")
 
