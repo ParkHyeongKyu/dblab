@@ -1,5 +1,7 @@
 import mysql.connector
 import numpy as np
+import json
+
 from adbench.run import RunPipeline
 from adbench.myutils import Utils
 from adbench.baseline.Customized.run import Customized
@@ -38,9 +40,17 @@ try:
 
     data = np.load('query_results.npz')
 
-    # 아래 부분은 모델을 어떻게 학습시킬지, 라벨링 할지에 따라 달라질 것임.
-    # 이 dataset은 그냥 하나의 예시일 뿐임
-    dataset = {'X': np.column_stack([data[name] for name in ['c_name', 'c_regnum', 'c_id']]), 'y': data['c_code']}
+    # JSON 파일에서 X, y 축 column 정보를 불러오기
+    with open('columns_info.json', 'r') as file:
+        columns_info = json.load(file)
+
+    X_columns = columns_info.get('X', [])
+    y_columns = columns_info.get('y', [])
+
+    if not X_columns or not y_columns:
+        raise ValueError("Invalid columns_info.json format. It should contain non-empty 'X' and 'y'.")
+
+    dataset = {'X': np.column_stack([data[name] for name in X_columns]), 'y': np.column_stack([data[name] for name in y_columns])}
 
     pipeline = RunPipeline(suffix='test', parallel='supervise', realistic_synthetic_mode=None, noise_type=None)
     results = pipeline.run(dataset=dataset, clf=Customized)

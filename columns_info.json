@@ -1,0 +1,4 @@
+{
+    "X": ["column_A", "column_B", "column_C"],
+    "y": ["column_D", "column_E"]
+}
