@@ -23,6 +23,7 @@ config = {
     'database': 'dg'
 }
 
+# parameter parsing
 parser = argparse.ArgumentParser(description='Run the model with the specified algorithm.')
 parser.add_argument('--model', type=str, required=True, help='The name of the model to run.')
 parser.add_argument('--impute', type=str, default='mean', choices=['mean', 'zero', 'most_frequent'], help='The method of imputation to be used.')
@@ -32,6 +33,7 @@ model_name = args.model
 imputation_method = args.impute
 rebalancing_method = args.rebalance
 
+# import for adbench models
 import_path = model_import_paths.get(model_name)
 
 if import_path == 'adbench.baseline.PyOD':
@@ -50,6 +52,7 @@ else:
     raise ValueError(f'Invalid model name: {model_name}')
 
 try:
+    # connect with mysql db
     with open('user_customized.sql', 'r') as file:
         query = file.read()
 
@@ -61,6 +64,7 @@ try:
     results = cursor.fetchall()
     column_names = cursor.column_names
 
+    # save query result in npz format
     if results:
         dtypes = [(name, 'U50') for name in column_names]
         arr = np.array(results, dtype=dtypes)
@@ -69,10 +73,12 @@ try:
     else:
         print("No results found.")
 
+    # read data from npz and store data on pandas dataframe
     data = np.load('query_results.npz')
 
     df = pd.DataFrame({name: data[name] for name in data.files})
 
+    # data imputation methods
     def impute_mean(df, column):
         df[column].fillna(df[column].mean(), inplace=True)
 
@@ -91,6 +97,7 @@ try:
         elif imputation_method == "most_frequent":
             impute_most_frequent(df, column)
 
+    # separate data by columns_info.json
     with open('columns_info.json', 'r') as file:
         columns_info = json.load(file)
 
@@ -104,6 +111,7 @@ try:
     y = df.loc[:, y_columns].to_numpy()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+    # data rebalancing
     if rebalancing_method == 'oversample':
         sampler = RandomOverSampler(random_state=42)
         X_resampled, y_resampled = sampler.fit_resample(X_train, y_train)
