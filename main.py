@@ -55,6 +55,7 @@ else:
 
 try:
     # connect with mysql db
+    print('Processing...')
     with open('user_customized.sql', 'r') as file:
         query = file.read()
 
@@ -65,6 +66,7 @@ try:
 
     results = cursor.fetchall()
     column_names = cursor.column_names
+    print(f'Processing Done! {len(results)} rows exported')
 
     # save query result in npz format
     if results:
@@ -91,6 +93,7 @@ try:
         most_frequent = df[column].mode()[0]
         df[column].fillna(most_frequent, inplace=True)
 
+    print('Imputation...')
     for column in df.columns:
         if imputation_method == "mean":
             impute_mean(df, column)
@@ -98,6 +101,7 @@ try:
             impute_zero(df, column)
         elif imputation_method == "most_frequent":
             impute_most_frequent(df, column)
+    print('Imputation Done!')
 
     # separate data by columns_info.json
     with open('columns_info.json', 'r') as file:
@@ -115,22 +119,28 @@ try:
 
     # One-hot Encoding
     if one_hot_encoding == 'yes':
+        print('One hot encoding...')
         X_train_encoded = pd.get_dummies(X_train, columns=X_columns)
         X_test_encoded = pd.get_dummies(X_test, columns=X_columns)
         # Ensure the columns are the same in both dataframes
         X_train_encoded, X_test_encoded = X_train_encoded.align(X_test_encoded, join='left', axis=1, fill_value=0)
+        print('One hot encoding done!')
     else:
         X_train_encoded, X_test_encoded = X_train, X_test
 
     # data rebalancing
+    print('Rebalancing...')
     if rebalancing_method == 'over':
         sampler = RandomOverSampler(random_state=42)
         X_resampled, y_resampled = sampler.fit_resample(X_train_encoded, y_train)
+        print('Rebalancing Done!')
     elif rebalancing_method == 'under':
         sampler = RandomUnderSampler(random_state=42)
         X_resampled, y_resampled = sampler.fit_resample(X_train_encoded, y_train)
+        print('Rebalancing Done!')
     elif rebalancing_method == 'no':
         X_resampled, y_resampled = X_train_encoded, y_train
+        print('No Rebalance')
     else:
         raise ValueError("Invalid rebalancing_method")
 
