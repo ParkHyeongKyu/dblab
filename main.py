@@ -8,6 +8,7 @@ import pandas as pd
 from adbench.myutils import Utils
 from model_import_path import model_import_paths
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 from imblearn.over_sampling import RandomOverSampler
 from imblearn.under_sampling import RandomUnderSampler
 
@@ -26,7 +27,7 @@ config = {
 # parameter parsing
 parser = argparse.ArgumentParser(description='Run the model with the specified algorithm.')
 parser.add_argument('--model', type=str, required=True, help='The name of the model to run.')
-parser.add_argument('--impute', type=str, default='mean', choices=['mean', 'zero', 'most_frequent'], help='The method of imputation to be used.')
+parser.add_argument('--impute', type=str, default='no', choices=['no', 'mean', 'zero', 'most_frequent'], help='The method of imputation to be used.')
 parser.add_argument('--rebalance', type=str, default='no', choices=['no', 'over', 'under'], help='The method of rebalancing data')
 parser.add_argument('--onehotencoding', type=str, default='yes', choices=['yes', 'no'], help='Will you apply one hot encoding on Dataset?')
 args = parser.parse_args()
@@ -101,6 +102,9 @@ try:
             impute_zero(df, column)
         elif imputation_method == "most_frequent":
             impute_most_frequent(df, column)
+        else:
+            print('Not process imputation')
+            break
     print('Imputation Done!')
 
     # separate data by columns_info.json
@@ -113,8 +117,8 @@ try:
     if not X_columns or not y_columns:
         raise ValueError("Invalid columns_info.json format. It should contain non-empty 'X' and 'y'.")
 
-    X = df.loc[:, X_columns].to_numpy()
-    y = df.loc[:, y_columns].to_numpy()
+    X = df.loc[:, X_columns]
+    y = df.loc[:, y_columns]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # One-hot Encoding
@@ -146,13 +150,15 @@ try:
 
     # fitting
     start_time = time.time()
-    model.fit(X_train=X_resampled, y_train=y_resampled)
+    le = LabelEncoder()
+    y_resampled_encoded = le.fit_transform(y_resampled.astype(int))
+    model.fit(X_train=X_resampled.values, y_train=y_resampled_encoded.ravel())
     end_time = time.time()
     time_fit = end_time - start_time
     print('Fit time: ' + str(time_fit))
 
     # prediction
-    score = model.predict_score(X_test_encoded)
+    score = model.predict_score(X_test_encoded.to_numpy())
 
     # evaluation
     result = utils.metric(y_true=y_test, y_score=score, pos_label=1)

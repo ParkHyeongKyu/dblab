@@ -1,4 +1,4 @@
 {
-    "X": ["column_A", "column_B", "column_C"],
-    "y": ["column_D", "column_E"]
+    "X": ["mi_code", "c_code"],
+    "y": ["mi_icon"]
 }

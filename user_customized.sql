@@ -1,1 +1,1 @@
-SELECT * FROM app_center_info;
+SELECT * FROM app_material_info;
